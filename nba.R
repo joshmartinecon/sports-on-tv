@@ -15,6 +15,11 @@ x %>%
   html_nodes(".Table__Title") %>%
   html_text() %>%
   trimws() -> datez
+datez2 = as.data.frame(do.call(rbind, strsplit(datez, " ")))
+for(i in 1:ncol(datez2)){
+  datez2[,i] = gsub(",", "", datez2[,i])
+}
+datez2 = as.Date(paste(datez2$V4, datez2$V2, datez2$V3), format = "%Y %B %d")
 
 # extract links (messy)
 x %>% 
@@ -23,7 +28,7 @@ x %>%
 
 # combine tables and add dates
 y = list()
-for(i in 1:length(html_table(x))){
+for(i in (1:length(html_table(x)))[Sys.Date() <= datez2]){
   x1 = as.data.frame(html_table(x)[[i]])
   x1 = x1[,1:4]
   x1$date = datez[i]
@@ -47,6 +52,8 @@ z = data.frame(
 
 # cut out fluff at top and bottom of page
 z = z[min(z$num[grepl("/nba/team/", z$links)]):max(z$num[grepl("vivid", z$links)]),]
+z$num = 1:nrow(z)
+z = z[min(z$num[grepl(tolower(gsub(" ", "-", x$Away[1])), z$links)]):nrow(z),]
 
 # get rid of links that repeat
 y = list()
