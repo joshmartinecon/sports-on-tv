@@ -28,13 +28,36 @@ x %>%
 
 # combine tables and add dates
 y = list()
-for(i in (1:length(html_table(x)))[Sys.Date() <= datez2]){
+for(i in (1:length(html_table(x)))){
   x1 = as.data.frame(html_table(x)[[i]])
   x1 = x1[,1:4]
   x1$date = datez[i]
   y[[length(y)+1]] = x1
 }
 x = as.data.frame(do.call(rbind, y))
+
+# drop data frames from the past
+z1 = list()
+for(i in 1:length(y)){
+  z = as.data.frame(do.call(cbind, y[[i]]))
+  z = as.data.frame(do.call(rbind, strsplit(z$date, ", ")))
+  calendar = data.frame(
+    month = c("January", "February", "March", "April", "May",
+              "June", "July", "August", "September", "October",
+              "November", "December"),
+    number = 1:12
+  )
+  z$month = as.data.frame(do.call(rbind, strsplit(z$V2, " ")))$V1
+  z$day = as.data.frame(do.call(rbind, strsplit(z$V2, " ")))$V2
+  z$month_number = calendar$number[match(z$month, calendar$month)]
+  z$date = as.Date(paste0(z$V3, "-", z$month_number, "-", z$day))
+  y[[i]]$date = z$date
+  
+  if(unique(y[[i]]$date >= Sys.Date())){
+    z1[[length(z1)+1]] = y[[i]]
+  }
+}
+y = z1
 
 # clean up
 colnames(x)[1:2] = c("Away", "Home")
@@ -97,6 +120,86 @@ y1$TV = ifelse(!is.na(y1$TV), "ESPN", NA)
 # match in 
 x[row.names(y1)[!is.na(y1$TV)],4] = "ESPN/ABC"
 
-##### which games are on national TV? #####
+##### differentiate between LA teams #####
+
+y = data.frame(
+  name = c("Los Angeles", "LA"),
+  fix = c("LA Lakers", "LA Clippers")
+)
+
+for(i in 1:2){
+  for(k in 1:2){
+    x[,i] = ifelse(x[,i] == y[k,1], y[k,2], x[,i])
+  }
+}
+
+##### scrape and match in betting odds #####
+
+# download html
+read_html("https://www.vegasinsider.com/nba/odds/futures/") -> y
+
+# extract and clean team names
+y %>% 
+  html_nodes("a") %>% 
+  html_attr("href") -> linkz
+linkz = linkz[grepl("/nba/teams/", linkz)]
+linkz = gsub("/nba/teams/", "", linkz[!grepl("vegasinsider", linkz)])
+linkz = gsub("/", "", linkz)
+
+# pull betting and clean bettind odds
+y %>%
+  html_table() %>% 
+  as.data.frame() -> y
+y = y[-1,c(-1,-9)]
+for(i in 1:ncol(y)){
+  y[,i] = as.numeric(gsub("\\+", "", y[,i]))
+}
+
+# convert to implied probabilities
+for(i in 1:ncol(y)){
+  y[,i] = ifelse(y[,i] > 0, 100/(100 + y[,i]), -1*y[,i] / (100 + -1*y[,i]))
+}
+
+# adjust for bookie over rounding
+y = y / apply(y, 2, sum)
+
+# take average across each site
+y = data.frame(
+  team = linkz[linkz != ""],
+  odds = apply(y, 1, mean)
+)
+
+# match over to schedule
+
+z = data.frame(
+  x = c("Atlanta", "Boston", "Brooklyn", "Charlotte", "Chicago", "Cleveland", "Dallas",
+        "Denver", "Detroit", "Golden State", "Houston", "Indiana", "LA Clippers", "LA Lakers",
+        "Memphis", "Miami", "Milwaukee", "Minnesota", "New Orleans", "New York", "Oklahoma City",
+        "Orlando", "Philadelphia", "Phoenix", "Portland", "Sacramento", "San Antonio", "Toronto",
+        "Utah", "Washington"),
+  
+  y = c("hawks", "celtics", "nets", "hornets", "bulls", "cavaliers", "mavericks",
+        "nuggets", "pistons", "warriors", "rockets", "pacers", "clippers", "lakers",
+        "grizzlies", "heat", "bucks", "timberwolves", "pelicans", "knicks", "thunder",
+        "magic", "76ers", "suns", "trail-blazers", "kings", "spurs", "raptors", "jazz", 
+        "wizards")
+)
+
+y$x = z$x[match(y$team, z$y)]
+x$away_odds = y$odds[match(x$Away, y$x)]
+x$home_odds = y$odds[match(x$Home, y$x)]
+x$combined_odds = apply(x[,6:7], 1, mean)
+
+x$grade = ifelse(x$combined_odds >= quantile(x$combined_odds, 0.9), "A",
+                 ifelse(x$combined_odds >= quantile(x$combined_odds, 0.8), "B",
+                        ifelse(x$combined_odds >= quantile(x$combined_odds, 0.7), "C",
+                               ifelse(x$combined_odds >= quantile(x$combined_odds, 0.9), "D", "F"))))
+x = x[,-6:-8]
+
+##### which (good) games are on national TV? #####
 
 x[!is.na(x$TV) & x$TV != "" & x$TV != "NBA TV",]
+
+# good names on TV?
+
+x[!is.na(x$TV) & x$TV != "" & x$TV != "NBA TV" & x$grade != "F",]
