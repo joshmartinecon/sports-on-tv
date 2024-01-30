@@ -34,7 +34,6 @@ for(i in (1:length(html_table(x)))){
   x1$date = datez[i]
   y[[length(y)+1]] = x1
 }
-x = as.data.frame(do.call(rbind, y))
 
 # drop data frames from the past
 z1 = list()
@@ -58,6 +57,7 @@ for(i in 1:length(y)){
   }
 }
 y = z1
+x = as.data.frame(do.call(rbind, y))
 
 # clean up
 colnames(x)[1:2] = c("Away", "Home")
@@ -146,12 +146,13 @@ linkz = linkz[grepl("/nba/teams/", linkz)]
 linkz = gsub("/nba/teams/", "", linkz[!grepl("vegasinsider", linkz)])
 linkz = gsub("/", "", linkz)
 
-# pull betting and clean bettind odds
+# pull betting and clean betting odds
 y %>%
   html_table() %>% 
   as.data.frame() -> y
 y = y[-1,c(-1,-9)]
 for(i in 1:ncol(y)){
+  y[,i] = ifelse(y[,i] == "", 0, y[,i])
   y[,i] = as.numeric(gsub("\\+", "", y[,i]))
 }
 
@@ -161,12 +162,14 @@ for(i in 1:ncol(y)){
 }
 
 # adjust for bookie over rounding
-y = y / apply(y, 2, sum)
+for(i in 1:ncol(y)){
+  y[,i] = y[,i] / sum(y[,i])
+}
 
 # take average across each site
 y = data.frame(
   team = linkz[linkz != ""],
-  odds = apply(y, 1, mean)
+  odds = rowMeans(y)
 )
 
 # match over to schedule
@@ -188,15 +191,18 @@ z = data.frame(
 y$x = z$x[match(y$team, z$y)]
 x$away_odds = y$odds[match(x$Away, y$x)]
 x$home_odds = y$odds[match(x$Home, y$x)]
-x$combined_odds = apply(x[,6:7], 1, mean)
+x$combined_odds = rowMeans(x[,6:7])
 
-x$grade = ifelse(x$combined_odds >= quantile(x$combined_odds, 0.9), "A",
-                 ifelse(x$combined_odds >= quantile(x$combined_odds, 0.8), "B",
-                        ifelse(x$combined_odds >= quantile(x$combined_odds, 0.7), "C",
-                               ifelse(x$combined_odds >= quantile(x$combined_odds, 0.9), "D", "F"))))
+x$grade = ifelse(x$combined_odds >= quantile(x$combined_odds, 0.9), "S",
+                 ifelse(x$combined_odds >= quantile(x$combined_odds, 0.8), "A",
+                        ifelse(x$combined_odds >= quantile(x$combined_odds, 0.7), "B",
+                               ifelse(x$combined_odds >= quantile(x$combined_odds, 0.6), "C", 
+                                      ifelse(x$combined_odds >= quantile(x$combined_odds, 0.5), "D", "F")))))
 x = x[,-6:-8]
 
 ##### which (good) games are on national TV? #####
+
+# any game
 
 x[!is.na(x$TV) & x$TV != "" & x$TV != "NBA TV",]
 
