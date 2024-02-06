@@ -166,6 +166,14 @@ for(i in 1:ncol(y)){
   y[,i] = y[,i] / sum(y[,i])
 }
 
+# remove any columns with NAs
+
+for(i in 1:ncol(y)){
+  if(TRUE %in% is.na(y[,i])){
+    y <- y[,-i]
+  }
+}
+
 # take average across each site
 y = data.frame(
   team = linkz[linkz != ""],
