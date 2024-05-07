@@ -32,7 +32,7 @@ Below is an example of the output provided by the code for week 9 of the 2023-24
 
 <a><img src="screenshots/cfb_screenshot.png"></a>
 
-[Source Code](https://github.com/joshmartinecon/sports-on-tv/blob/main/soccer.R)
+[Source Code](https://github.com/joshmartinecon/sports-on-tv/blob/main/college%20football.R)
 
 ## International Soccer (Fútbol)
 
@@ -42,9 +42,11 @@ To do so, I provide code for web scraping code to extract data from [Opta Analys
 
 The current code filters matches based on the 1) overall quality of each of the teams and 2) the relative difference in each club's team quality. Future iterations will add "importance" indicators to measure how much the match will impact the club's chances of promotion/relegation and tournament qualification. Additionally, team ratings are not yet provided for women's teams. These will be incorporated once data quality improves.
 
+Crucially, I have not yet added information on where each game can be streamed. In the meantime, check out [Fotmob](https://www.fotmob.com/) for this information. They have a nice app as well.
+
 <a><img src="screenshots/soccer_screenshot.png"></a>
 
-[Source Code](https://github.com/joshmartinecon/sports-on-tv/blob/main/college%20football.R)
+[Source Code](https://github.com/joshmartinecon/sports-on-tv/blob/main/soccer.R)
 
 ## National Football League (NFL)
 
