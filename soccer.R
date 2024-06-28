@@ -96,13 +96,15 @@ x$keep <- 1:nrow(x)
 
 # Drop (for now) WSL matches because they don't have team ratings
 x <- x[x$league %ni% c("WSL"),]
-x <- cbind(x[,1:3], y)
+x <- cbind(x[x$league != "UWC" ,1:3], y)
 
 # Drop uneven match ups & low quality teams while always keeping European matches
-x <- x[abs(x$home_pr - x$away_pr) < 10 & 
-         !is.na(x$league) & (x$away_pr + x$home_pr)/2 >= 86 & 
-         x$home_pr >= 80 & x$away_pr >= 80 |
-         x$league == "UCL" | x$league == "UEL",]
+x$overall <- round((x$home_pr + x$away_pr)/2)
+x$diff <- 100 - abs(x$win - x$lose)
+x$score <- round(x$overall*3/4 + x$diff*1/4)
+x_subset <- as.data.frame(lapply(x[, c(6, 7)], as.numeric))
+x <- x[rowSums(x_subset >= 85) == ncol(x_subset >= 85),]
+x <- x[x$diff >= 50,]
 
 # Simplify output
 z <- data.frame(
@@ -111,7 +113,7 @@ z <- data.frame(
                     format = "%Y-%m-%d %H:%M"),
   home = x$home,
   away = x$away,
-  rating = round((x$home_pr + x$away_pr)/2)
+  rating = x$score
 )
 
 # Print output

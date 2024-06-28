@@ -5,10 +5,10 @@ library(stringr)
 rm(list = ls())
 '%ni%' = Negate('%in%')
 
-##### NBA: web scrape #####
+##### WNBA: web scrape #####
 
 # main site
-read_html("https://www.espn.com/nba/schedule") -> x
+read_html("https://www.espn.com/wnba/schedule") -> x
 
 # extract dates
 x %>% 
@@ -62,10 +62,8 @@ x = as.data.frame(do.call(rbind, y))
 # clean up
 colnames(x)[1:2] = c("Away", "Home")
 x$Home = substr(x$Home, 4, nchar(x$Home))
-x$Away <- sub("East.*|West.*", "", x$Away)
-x$Home <- sub("East.*|West.*", "", x$Home)
 
-##### NBA: get TV providers #####
+##### WNBA: get TV providers #####
 
 # Issue? 'ESPN' reads in as a link rather than text
 
@@ -76,7 +74,7 @@ z = data.frame(
 )
 
 # cut out fluff at top and bottom of page
-z = z[min(z$num[grepl("/nba/team/", z$links)]):max(z$num[grepl("vivid", z$links)]),]
+z = z[min(z$num[grepl("/wnba/team/", z$links)]):max(z$num[grepl("vivid", z$links)]),]
 z$num = 1:nrow(z)
 z = z[min(z$num[grepl(tolower(gsub(" ", "-", x$Away[1])), z$links)]):nrow(z),]
 
@@ -123,100 +121,52 @@ y1$TV = ifelse(!is.na(y1$TV), "ESPN", NA)
 # match in 
 x[row.names(y1)[!is.na(y1$TV)],4] = "ESPN/ABC"
 
-##### NBA: differentiate between LA teams #####
-
-y = data.frame(
-  name = c("Los Angeles", "LA"),
-  fix = c("LA Lakers", "LA Clippers")
-)
-
-for(i in 1:2){
-  for(k in 1:2){
-    x[,i] = ifelse(x[,i] == y[k,1], y[k,2], x[,i])
-  }
-}
-
-##### NBA: scrape and match in betting odds #####
+##### WNBA: scrape and match in betting odds #####
 
 # download html
-read_html("https://www.vegasinsider.com/nba/odds/futures/") -> y
+read_html("https://www.vegasinsider.com/wnba/odds/futures/") -> y
 
-# extract and clean team names
-y %>% 
-  html_nodes("a") %>% 
-  html_attr("href") -> linkz
-linkz = linkz[grepl("/nba/teams/", linkz)]
-linkz = gsub("/nba/teams/", "", linkz[!grepl("vegasinsider", linkz)])
-linkz = gsub("/", "", linkz)
-
-# pull betting and clean betting odds
+# extract text
 y %>%
-  html_table() %>% 
-  as.data.frame() -> y
-y = y[-1,c(-1,-9)]
-y <- y[,1:4]
-for(i in 1:ncol(y)){
-  y[,i] = ifelse(y[,i] == "", 0, y[,i])
-  y[,i] = as.numeric(gsub("\\+", "", y[,i]))
-}
+  html_text() -> z
 
-# convert to implied probabilities
-for(i in 1:ncol(y)){
-  y[,i] = ifelse(y[,i] > 0, 100/(100 + y[,i]), -1*y[,i] / (100 + -1*y[,i]))
-}
+# team names
+teamz <- c("Atlanta Dream", "Chicago Sky", "Connecticut Sun", "Dallas Wings", "Indiana Fever", 
+           "Las Vegas Aces", "Los Angeles Sparks", "Minnesota Lynx", "New York Liberty", 
+           "Phoenix Mercury", "Seattle Storm", "Washington Mystics")
 
-# adjust for bookie over rounding
-for(i in 1:ncol(y)){
-  y[,i] = y[,i] / sum(y[,i])
-}
-
-# remove any columns with NAs
-
-for(i in 1:ncol(y)){
-  if(TRUE %in% is.na(y[,i])){
-    y <- y[,-i]
+y <- list()
+for(i in teamz){
+  for(k in c("+", "-")){
+    y[[length(y)+1]] <- unique(unlist(str_extract_all(z, paste0(teamz, " ", "\\", k, "\\d+(\\.\\d+)?"))))
   }
 }
-
-# take average across each site
-y = data.frame(
-  team = linkz[linkz != ""],
-  odds = rowMeans(y)
+y <- data.frame(
+  scrape = unique(unlist(y))
 )
+y$team <- trimws(str_extract(y$scrape, "^[A-Za-z ]+[^\\d+-]"))
+y$odds <- as.numeric(str_extract(y$scrape, "[+-]?\\d+"))
+y$prob <- round(ifelse(y$odds > 0, 100 / (100 + y$odds), -1*y$odds / (100 - y$odds)), 2)
 
 # match over to schedule
-
-z = data.frame(
-  x = c("Atlanta", "Boston", "Brooklyn", "Charlotte", "Chicago", "Cleveland", "Dallas",
-        "Denver", "Detroit", "Golden State", "Houston", "Indiana", "LA Clippers", "LA Lakers",
-        "Memphis", "Miami", "Milwaukee", "Minnesota", "New Orleans", "New York", "Oklahoma City",
-        "Orlando", "Philadelphia", "Phoenix", "Portland", "Sacramento", "San Antonio", "Toronto",
-        "Utah", "Washington"),
-  
-  y = c("hawks", "celtics", "nets", "hornets", "bulls", "cavaliers", "mavericks",
-        "nuggets", "pistons", "warriors", "rockets", "pacers", "clippers", "lakers",
-        "grizzlies", "heat", "bucks", "timberwolves", "pelicans", "knicks", "thunder",
-        "magic", "76ers", "suns", "trail-blazers", "kings", "spurs", "raptors", "jazz", 
-        "wizards")
+z <- data.frame(
+  full_name = teamz,
+  abbr_name = c("Atlanta", "Chicago", "Connecticut", "Dallas", "Indiana", "Las Vegas",
+                "Los Angeles", "Minnesota", "New York", "Phoenix", "Seattle", "Washington")
 )
-
-y$x = z$x[match(y$team, z$y)]
-x$away_odds = y$odds[match(x$Away, y$x)]
-x$home_odds = y$odds[match(x$Home, y$x)]
+z$odds <- y$prob[match(z$full_name, y$team)]
+x$away_odds = z$odds[match(x$Away, z$abbr_name)]
+x$home_odds = z$odds[match(x$Home, z$abbr_name)]
 x$combined_odds = rowMeans(x[,6:7])
 
-x$grade = ifelse(x$combined_odds >= 6/32, "S",
-                 ifelse(x$combined_odds >= 5/32, "A",
-                        ifelse(x$combined_odds >= 4/32, "B",
-                               ifelse(x$combined_odds >= 3/32, "C", 
-                                      ifelse(x$combined_odds >= 2/32, "D", "F")))))
+x$grade = ifelse(x$combined_odds >= quantile(x$combined_odds, 0.9), "S",
+                 ifelse(x$combined_odds >= quantile(x$combined_odds, 0.8), "A",
+                        ifelse(x$combined_odds >= quantile(x$combined_odds, 0.7), "B",
+                               ifelse(x$combined_odds >= quantile(x$combined_odds, 0.6), "C", 
+                                      ifelse(x$combined_odds >= quantile(x$combined_odds, 0.5), "D", "F")))))
 x = x[,-6:-8]
 
-##### NBA: which (good) games are on national TV? #####
-
-# any game
-
-x[!is.na(x$TV) & x$TV != "" & x$TV != "NBA TV",]
+##### WNBA: which (good) games are on national TV? #####
 
 # good names on TV?
 
