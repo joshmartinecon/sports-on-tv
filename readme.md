@@ -2,13 +2,13 @@
 
 I suffer from choice paralysis when it comes to choosing which professional (yes, I count college athletics) sports games to have on in the background while I doomscroll Twitter. Below are some examples of web scraping code in R that I have created to help identify which games will be available to stream.
 
-## National Basketball Association (NBA)
+## (Women's) National Basketball Association
 
 I believe three things to be true about the NBA/WNBA:
 
     1. These are the most entertaining sports leagues in the world.
     2. There are too many basketball games.
-    3. Services such NBA League Pass are not worth it given the relative abundance of nationally televised games.
+    3. Services such League Pass are not worth it given the relative abundance of nationally televised games.
 
 If you generally agree with the above statements, then my web scraping code may be of interest to you. Given that the NBA very often does not broadcast games over one another and the modal game will be entertaining and competitive, then I do not pay any attention to claiming differences in quality or importance across games. Thus, this code is only worried about providing information on the date, time and TV channel of games which are widely viewable by the general public.
 
@@ -16,9 +16,11 @@ Below is an example of the output provided by the code for the start of the 2023
 
 <a><img src="screenshots/nba_screenshot.png"></a>
 
-Future iterations of this may 1) do this for the whole season rather than weekly, 2) display this information in an interactive app form and 3) include the WNBA once their seasons starts back up.
+Future iterations of this may do this for the whole season rather than weekly and display this information in an interactive app form.
 
-[Source Code](https://github.com/joshmartinecon/sports-on-tv/blob/main/nba.R)
+[NBA Source Code](https://github.com/joshmartinecon/sports-on-tv/blob/main/nba.R)
+
+[WNBA Source Code](https://github.com/joshmartinecon/sports-on-tv/blob/main/wnba.R)
 
 ## College Football (CFB)
 
@@ -47,6 +49,14 @@ Crucially, I have not yet added information on where each game can be streamed. 
 <a><img src="screenshots/soccer_screenshot.png"></a>
 
 [Source Code](https://github.com/joshmartinecon/sports-on-tv/blob/main/soccer.R)
+
+## Tennis
+
+I will periodically add major tennis tournaments. Below is a link to the code for Wimbledon. It only contains information for men's and women's singles matches. 
+
+This code scrapes (live) individual betting odds for each match and then matches this to the overall odds each person has to win to championship. Weights of 1/4 and 3/4s are placed on these outcomes and then combined into one final ranking.
+
+[Source Code](https://github.com/joshmartinecon/sports-on-tv/blob/main/wimbledon.R)
 
 ## National Football League (NFL)
 
