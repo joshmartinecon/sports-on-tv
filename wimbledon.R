@@ -10,7 +10,8 @@ for(i in c("men", "women")){
       html_nodes('.sportsbook-odds') %>%
       html_text(trim = TRUE)
   )
-  x$odds <- as.numeric(gsub("+", "", x$odds))
+  x$odds <- gsub("+", "", x$odds)
+  x$odds <- as.numeric(gsub("−", "-", x$odds))
   x$prob <- ifelse(x$odds < 0, -1*x$odds / (-1*x$odds + 100), 100 / (x$odds + 100))
   x$prob <- x$prob / sum(x$prob)
   x$group <- i

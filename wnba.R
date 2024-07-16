@@ -159,6 +159,8 @@ x$away_odds = z$odds[match(x$Away, z$abbr_name)]
 x$home_odds = z$odds[match(x$Home, z$abbr_name)]
 x$combined_odds = rowMeans(x[,6:7])
 
+x <- x[!is.na(x$combined_odds),]
+
 x$grade = ifelse(x$combined_odds >= quantile(x$combined_odds, 0.9), "S",
                  ifelse(x$combined_odds >= quantile(x$combined_odds, 0.8), "A",
                         ifelse(x$combined_odds >= quantile(x$combined_odds, 0.7), "B",
