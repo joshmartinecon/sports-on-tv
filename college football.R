@@ -42,7 +42,8 @@ for(i in 1:length(y)){
   y1$date = datez[i]
   z[[length(z)+1]] = y1
 }
-y = as.data.frame(do.call(rbind, z))
+z <- z[!sapply(z, function(x) "result" %in% colnames(as.data.frame(x)))]
+y <- as.data.frame(do.call(rbind, z))
 
 # clean up
 colnames(y)[1:2] = c("Away", "Home")

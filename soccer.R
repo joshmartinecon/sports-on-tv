@@ -96,7 +96,7 @@ x$keep <- 1:nrow(x)
 
 # Drop (for now) WSL matches because they don't have team ratings
 x <- x[x$league %ni% c("WSL"),]
-x <- cbind(x[x$league != "UWC" ,1:3], y)
+x <- cbind(x[1:nrow(y),1:3], y)
 
 # Drop uneven match ups & low quality teams while always keeping European matches
 x$overall <- round((x$home_pr + x$away_pr)/2)
