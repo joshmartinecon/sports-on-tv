@@ -117,4 +117,4 @@ z <- data.frame(
 )
 
 # Print output
-z
+z[z$rating >= 85,]
